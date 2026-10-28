@@ -1,0 +1,42 @@
+pipeline {
+  agent any
+  environment { IMAGE = 'DOCKERHUB_USER/medicare-plus' }
+  stages {
+    stage('Detect Live Color') {
+      steps {
+        script {
+          env.LIVE = sh(script: "kubectl get svc medicare-bg -o jsonpath='{.spec.selector.version}'", returnStdout: true).trim()
+          env.IDLE = (env.LIVE == 'blue') ? 'green' : 'blue'
+          echo "LIVE=${env.LIVE}  IDLE=${env.IDLE}"
+        }
+      }
+    }
+    stage('Build and Push') {
+      steps {
+        sh 'docker build -t $IMAGE:bg-$BUILD_NUMBER --build-arg APP_VERSION=v2.$BUILD_NUMBER --build-arg THEME=$IDLE .'
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+          sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
+          sh 'docker push $IMAGE:bg-$BUILD_NUMBER'
+        }
+      }
+    }
+    stage('Deploy to Idle') {
+      steps {
+        sh 'kubectl set image deployment/medicare-$IDLE medicare=$IMAGE:bg-$BUILD_NUMBER'
+        sh 'kubectl rollout status deployment/medicare-$IDLE --timeout=120s'
+      }
+    }
+    stage('Smoke Test') {
+      steps { sh 'kubectl exec deploy/medicare-$IDLE -- wget -qO- http://localhost:8080/health.html' }
+    }
+    stage('Approve') {
+      steps { input message: "Switch live traffic to ${env.IDLE}?" }
+    }
+    stage('Switch Traffic') {
+      steps {
+        sh "kubectl patch svc medicare-bg -p '{\"spec\":{\"selector\":{\"version\":\"${env.IDLE}\"}}}'"
+      }
+    }
+  }
+  post { failure { echo 'Pipeline failed - live traffic was not changed.' } }
+}

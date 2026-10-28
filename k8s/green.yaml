@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medicare-green
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: medicare
+      version: green
+  template:
+    metadata:
+      labels:
+        app: medicare
+        version: green
+    spec:
+      containers:
+      - name: medicare
+        image: ravindras1156/medicare-plus:bg-init
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health.html
+            port: 8080
