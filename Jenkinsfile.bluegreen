@@ -27,7 +27,7 @@ pipeline {
       }
     }
     stage('Smoke Test') {
-      steps { sh 'kubectl exec deploy/medicare-$IDLE -- wget -qO- http://localhost:8080/health.html' }
+      steps { sh 'kubectl exec deploy/medicare-$IDLE -- wget -qO- http://127.0.0.1:8080/health.html' }
     }
     stage('Approve') {
       steps { input message: "Switch live traffic to ${env.IDLE}?" }
