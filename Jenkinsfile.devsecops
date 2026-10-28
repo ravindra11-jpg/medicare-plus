@@ -1,0 +1,39 @@
+pipeline {
+  agent any
+  environment { IMAGE = 'DOCKERHUB_USER/medicare-plus' }
+  stages {
+    stage('Secret Scan (Gitleaks)') {
+      steps { sh 'docker run --rm -v "$WORKSPACE":/repo zricethezav/gitleaks:latest detect --source=/repo --no-git -v' }
+    }
+    stage('Dockerfile Lint (Hadolint)') {
+      steps { sh 'docker run --rm -i hadolint/hadolint < Dockerfile' }
+    }
+    stage('Build Image') {
+      steps { sh 'docker build -t $IMAGE:sec-$BUILD_NUMBER --build-arg APP_VERSION=v3.$BUILD_NUMBER --build-arg THEME=blue .' }
+    }
+    stage('Image Scan (Trivy)') {
+      steps {
+        sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 --no-progress $IMAGE:sec-$BUILD_NUMBER'
+        sh 'trivy image --severity CRITICAL --exit-code 1 --no-progress $IMAGE:sec-$BUILD_NUMBER'
+      }
+    }
+    stage('Manifest Scan (Trivy)') {
+      steps { sh 'trivy config --exit-code 0 k8s/secure-deployment.yaml' }
+    }
+    stage('Push Image') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+          sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
+          sh 'docker push $IMAGE:sec-$BUILD_NUMBER'
+        }
+      }
+    }
+    stage('Deploy Hardened') {
+      steps {
+        sh 'kubectl apply -f k8s/secure-deployment.yaml'
+        sh 'kubectl set image deployment/medicare-secure medicare=$IMAGE:sec-$BUILD_NUMBER'
+        sh 'kubectl rollout status deployment/medicare-secure --timeout=120s'
+      }
+    }
+  }
+}
