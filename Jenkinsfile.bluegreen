@@ -1,6 +1,6 @@
 pipeline {
   agent any
-  environment { IMAGE = 'DOCKERHUB_USER/medicare-plus' }
+  environment { IMAGE = 'ravindras1156/medicare-plus' }
   stages {
     stage('Detect Live Color') {
       steps {
