@@ -1,2 +1,0 @@
-github_pat = "ghp_R4nD0mT0k3nV4lu3Xy9Zq2Wm8Jb5Nc1Ks7Ld"
-aws_secret_access_key = "q8Zr3KfV1xLm9Tn2Yp5Wc7Hb4Jd6Gs0Aa1Bv3Nx"
