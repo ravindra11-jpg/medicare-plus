@@ -27,7 +27,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: medicare
-        image: DOCKERHUB_USER/medicare-plus:latest
+        image: ravindras1156/medicare-plus:latest
         ports:
         - containerPort: 8080
         securityContext:

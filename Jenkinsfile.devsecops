@@ -1,6 +1,6 @@
 pipeline {
   agent any
-  environment { IMAGE = 'DOCKERHUB_USER/medicare-plus' }
+  environment { IMAGE = 'ravindras1156/medicare-plus' }
   stages {
     stage('Secret Scan (Gitleaks)') {
       steps { sh 'docker run --rm -v "$WORKSPACE":/repo zricethezav/gitleaks:latest detect --source=/repo --no-git -v' }
